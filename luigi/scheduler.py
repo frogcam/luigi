@@ -34,7 +34,6 @@ from luigi.batch_notifier import BatchNotifier
 
 try:
     from kubernetes import client, config
-    from pathlib import Path
 except ImportError:
     print("No Kubernetes environment")
 
@@ -1498,9 +1497,9 @@ class Scheduler(object):
     @rpc_method()
     def jobs(self):
         try:
-            if os.path.exists(f"{Path.home()}/.kube/config"):
+            if configuration.get_config().get("kubernetes", "auth_method", "kubeconfig"):
                 config.load_kube_config()
-            elif os.path.exists("/run/secrets/kubernetes.io/serviceaccount/"):
+            else:
                 config.load_incluster_config()
 
             batch_api_v1 = client.BatchV1beta1Api()
@@ -1512,15 +1511,15 @@ class Scheduler(object):
                 result.append(cron_job.metadata.name)
 
             return result
-        except NameError:
+        except TypeError:
             logger.error("Missing Kubernetes configurations")
 
     @rpc_method()
     def trigger_job(self, job_name):
         try:
-            if os.path.exists(f"{Path.home()}/.kube/config"):
+            if configuration.get_config().get("kubernetes", "auth_method", "kubeconfig"):
                 config.load_kube_config()
-            elif os.path.exists("/run/secrets/kubernetes.io/serviceaccount/"):
+            else:
                 config.load_incluster_config()
 
             batch_api_v1 = client.BatchV1beta1Api()
@@ -1536,7 +1535,7 @@ class Scheduler(object):
 
             return f"Successfully triggered the {job_name}!"
 
-        except NameError:
+        except TypeError:
             logger.error("Missing Kubernetes configurations")
             return f"Failed triggering {job_name}!"
 

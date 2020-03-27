@@ -74,8 +74,7 @@ meta = {}
 with open("luigi/__meta__.py", "r") as f:
     exec(f.read(), meta)
 
-
-if os.path.exists(f"{Path.home()}/.kube/config") or os.path.exists("/run/secrets/kubernetes.io/serviceaccount/"):
+if os.environ.get('KUBERNETES_CLUSTER', None) == 'True':
     install_requires.append('kubernetes==10.0.1')
 
 setup(
