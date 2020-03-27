@@ -516,6 +516,8 @@ function visualiserApp(luigi) {
         } else if (fragmentQuery.tab == "resources") {
             expandResources(fragmentQuery.resources);
             switchTab("resourceList");
+        } else if (fragmentQuery.tab == "jobs") {
+            switchTab("jobList");
         } else if (fragmentQuery.tab == "graph") {
             var taskId = fragmentQuery.taskId;
             var hideDone = fragmentQuery.hideDone === '1' ? true : false;
@@ -1178,6 +1180,37 @@ function visualiserApp(luigi) {
             });
         });
 
+        luigi.getJobList(function(jobs) {
+			$.each(jobs, function(index, job) {
+
+				var newTableRow = "<tr>" +
+						"<td>" + job + "</td>" +
+						"<td><a class='job' data-url='/api/trigger_job' data-name='" + job + "'>Trigger</a></td>"
+					"</tr>";
+				$("#jobList tbody").append(newTableRow);
+			});
+
+			$("#jobTable").DataTable({
+				stateSave: true,
+				language: {
+					search: "Filter table:"
+				},
+			});
+
+			$(".job").click(function(e) {
+				$.ajax({
+					url: $(this).data("url"),
+					type: "GET",
+					data: {data: JSON.stringify({ job_name: $(this).data("name") })},
+					dataType: "json"
+				}).done(function(data) {
+					alert(data["response"]);
+				});
+				return false;
+			});
+        });
+
+
         dt = $('#taskTable').DataTable({
             stateSave: true,
             stateSaveCallback: function(settings, data) {
@@ -1551,6 +1584,8 @@ function visualiserApp(luigi) {
             } else if (tabId == 'resourceList') {
                 state.resources = JSON.stringify(expandedResources());
                 state.tab = 'resources';
+            } else if (tabId == 'jobList') {
+                state.tab = 'jobs';
             }
 
             location.hash = '#' + URI.buildQuery(state);
