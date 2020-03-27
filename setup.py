@@ -14,6 +14,7 @@
 
 import os
 import sys
+from pathlib import Path
 
 from setuptools import setup
 
@@ -73,8 +74,12 @@ meta = {}
 with open("luigi/__meta__.py", "r") as f:
     exec(f.read(), meta)
 
+
+if os.path.exists(f"{Path.home()}/.kube/config") or os.path.exists("/run/secrets/kubernetes.io/serviceaccount/"):
+    install_requires.append('kubernetes==10.0.1')
+
 setup(
-    name='luigi',
+    name='luigi-k8s-jobs-runner',
     version=meta['__version__'],
     description=meta['__doc__'],
     long_description=long_description,

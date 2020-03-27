@@ -22,6 +22,8 @@ See :doc:`/central_scheduler` for more info.
 """
 
 import collections
+import datetime
+
 try:
     from collections.abc import MutableSet
 except ImportError:
@@ -29,6 +31,12 @@ except ImportError:
 import json
 
 from luigi.batch_notifier import BatchNotifier
+
+try:
+    from kubernetes import client, config
+    from pathlib import Path
+except ImportError:
+    print("No Kubernetes environment")
 
 try:
     import cPickle as pickle
@@ -1486,6 +1494,51 @@ class Scheduler(object):
             return self._state.get_task(task_id).pretty_id
         else:
             return task_id
+
+    @rpc_method()
+    def jobs(self):
+        try:
+            if os.path.exists(f"{Path.home()}/.kube/config"):
+                config.load_kube_config()
+            elif os.path.exists("/run/secrets/kubernetes.io/serviceaccount/"):
+                config.load_incluster_config()
+
+            batch_api_v1 = client.BatchV1beta1Api()
+
+            namespace = configuration.get_config().get("kubernetes", "namespace", "default")
+
+            result = []
+            for cron_job in batch_api_v1.list_namespaced_cron_job(namespace).items:
+                result.append(cron_job.metadata.name)
+
+            return result
+        except NameError:
+            logger.error("Missing Kubernetes configurations")
+
+    @rpc_method()
+    def trigger_job(self, job_name):
+        try:
+            if os.path.exists(f"{Path.home()}/.kube/config"):
+                config.load_kube_config()
+            elif os.path.exists("/run/secrets/kubernetes.io/serviceaccount/"):
+                config.load_incluster_config()
+
+            batch_api_v1 = client.BatchV1beta1Api()
+
+            namespace = configuration.get_config().get("kubernetes", "namespace", "default")
+
+            job = batch_api_v1.read_namespaced_cron_job(job_name, namespace)
+            job_template = job.spec.job_template
+
+            unique_identified = datetime.datetime.now().strftime("%Y%m%d%H%M%S")
+            job_template.metadata.name = f"{job_name}-manual-{unique_identified}"
+            client.BatchV1Api().create_namespaced_job(body=job_template, namespace=namespace)
+
+            return f"Successfully triggered the {job_name}!"
+
+        except NameError:
+            logger.error("Missing Kubernetes configurations")
+            return f"Failed triggering {job_name}!"
 
     @rpc_method()
     def worker_list(self, include_running=True, **kwargs):
