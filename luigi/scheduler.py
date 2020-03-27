@@ -1497,7 +1497,7 @@ class Scheduler(object):
     @rpc_method()
     def jobs(self):
         try:
-            if configuration.get_config().get("kubernetes", "auth_method", "kubeconfig"):
+            if configuration.get_config().get("kubernetes", "auth_method") == "kubeconfig":
                 config.load_kube_config()
             else:
                 config.load_incluster_config()
@@ -1511,13 +1511,13 @@ class Scheduler(object):
                 result.append(cron_job.metadata.name)
 
             return result
-        except TypeError:
+        except (TypeError, NameError):
             logger.error("Missing Kubernetes configurations")
 
     @rpc_method()
     def trigger_job(self, job_name):
         try:
-            if configuration.get_config().get("kubernetes", "auth_method", "kubeconfig"):
+            if configuration.get_config().get("kubernetes", "auth_method") == "kubeconfig":
                 config.load_kube_config()
             else:
                 config.load_incluster_config()
@@ -1535,7 +1535,7 @@ class Scheduler(object):
 
             return f"Successfully triggered the {job_name}!"
 
-        except TypeError:
+        except (TypeError, NameError):
             logger.error("Missing Kubernetes configurations")
             return f"Failed triggering {job_name}!"
 
